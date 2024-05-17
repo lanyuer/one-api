@@ -100,16 +100,16 @@ const LogsTable = () => {
       </div> : <></>);
     }
   },
-  // {
-  //   title: '用时', dataIndex: 'use_time', render: (text, record, index) => {
-  //     return (<div>
-  //       <Space>
-  //         {renderUseTime(text)}
-  //         {renderIsStream(record.is_stream)}
-  //       </Space>
-  //     </div>);
-  //   }
-  // },
+ {
+    title: '用时', dataIndex: 'use_time', render: (text, record, index) => {
+      return (<div>
+        <Space>
+          {renderUseTime(text)}
+          {renderIsStream(record.is_stream)}
+        </Space>
+      </div>);
+    }
+  },
   {
     title: '提示', dataIndex: 'prompt_tokens', render: (text, record, index) => {
       return (record.type === 0 || record.type === 2 ? <div>

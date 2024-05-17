@@ -41,6 +41,15 @@ function renderType(type) {
   }
 }
 
+
+function renderStream(stream) {
+  if (stream) {
+    return <Label basic color='green'> 流式 </Label>;
+  } else {
+    return <Label basic color='olive'> 普通 </Label>;
+  }
+}
+
 const LogsTable = () => {
   const [logs, setLogs] = useState([]);
   const [showStat, setShowStat] = useState(false);
@@ -297,6 +306,24 @@ const LogsTable = () => {
               <Table.HeaderCell
                 style={{ cursor: 'pointer' }}
                 onClick={() => {
+                  sortLog('use_time');
+                }}
+                width={2}
+              >
+                耗时(ms)
+              </Table.HeaderCell>
+              <Table.HeaderCell
+                style={{ cursor: 'pointer' }}
+                onClick={() => {
+                  sortLog('is_stream');
+                }}
+                width={2}
+              >
+                流式
+              </Table.HeaderCell>
+              <Table.HeaderCell
+                style={{ cursor: 'pointer' }}
+                onClick={() => {
                   sortLog('prompt_tokens');
                 }}
                 width={1}
@@ -357,6 +384,8 @@ const LogsTable = () => {
                     <Table.Cell>{log.token_name ? <Label basic>{log.token_name}</Label> : ''}</Table.Cell>
                     <Table.Cell>{renderType(log.type)}</Table.Cell>
                     <Table.Cell>{log.model_name ? <Label basic>{log.model_name}</Label> : ''}</Table.Cell>
+                    <Table.Cell>{log.use_time ? log.use_time/1000 : ''}</Table.Cell>
+                    <Table.Cell>{log.is_stream ? 'Y' : 'N'}</Table.Cell>
                     <Table.Cell>{log.prompt_tokens ? log.prompt_tokens : ''}</Table.Cell>
                     <Table.Cell>{log.completion_tokens ? log.completion_tokens : ''}</Table.Cell>
                     <Table.Cell>{log.quota ? renderQuota(log.quota, 6) : ''}</Table.Cell>

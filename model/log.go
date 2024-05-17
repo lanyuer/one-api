@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -22,7 +23,11 @@ type Log struct {
 	Quota            int    `json:"quota" gorm:"default:0"`
 	PromptTokens     int    `json:"prompt_tokens" gorm:"default:0"`
 	CompletionTokens int    `json:"completion_tokens" gorm:"default:0"`
+	UseTime          int    `json:"use_time" gorm:"default:0"`
+	IsStream         bool   `json:"is_stream" gorm:"default:false"`
 	ChannelId        int    `json:"channel" gorm:"index"`
+	TokenId          int    `json:"token_id" gorm:"default:0;index"`
+	Other            string `json:"other"`
 }
 
 const (
@@ -65,7 +70,7 @@ func RecordTopupLog(userId int, content string, quota int) {
 	}
 }
 
-func RecordConsumeLog(ctx context.Context, userId int, channelId int, promptTokens int, completionTokens int, modelName string, tokenName string, quota int64, content string) {
+func RecordConsumeLog(ctx context.Context, userId int, channelId int, promptTokens int, completionTokens int, modelName string, tokenName string, quota int64, content string, useTime int64, isStream bool) {
 	logger.Info(ctx, fmt.Sprintf("record consume log: userId=%d, channelId=%d, promptTokens=%d, completionTokens=%d, modelName=%s, tokenName=%s, quota=%d, content=%s", userId, channelId, promptTokens, completionTokens, modelName, tokenName, quota, content))
 	if !config.LogConsumeEnabled {
 		return
@@ -82,6 +87,8 @@ func RecordConsumeLog(ctx context.Context, userId int, channelId int, promptToke
 		ModelName:        modelName,
 		Quota:            int(quota),
 		ChannelId:        channelId,
+		UseTime:          int(useTime),
+		IsStream:         isStream,
 	}
 	err := LOG_DB.Create(log).Error
 	if err != nil {
