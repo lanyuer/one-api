@@ -42,13 +42,13 @@ function renderIsStream(bool) {
 }
 
 function renderUseTime(type) {
-  const time = parseInt(type);
+  const time = parseInt(type/1000);
   if (time < 101) {
-    return <Tag color="green" size="large"> {time} s </Tag>;
-  } else if (time < 300) {
-    return <Tag color="orange" size="large"> {time} s </Tag>;
+    return <Tag color="green" size="large"> {time} ms </Tag>;
+  } else if (time < 1001) {
+    return <Tag color="orange" size="large"> {time} ms </Tag>;
   } else {
-    return <Tag color="red" size="large"> {time} s </Tag>;
+    return <Tag color="red" size="large"> {time} ms </Tag>;
   }
 }
 
