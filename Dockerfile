@@ -31,6 +31,7 @@ RUN go build -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=
 
 FROM alpine
 
+RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 RUN apk update \
     && apk upgrade \
     && apk add --no-cache ca-certificates tzdata \
