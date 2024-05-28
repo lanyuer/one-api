@@ -1,9 +1,10 @@
 package client
 
 import (
-	"github.com/songquanpeng/one-api/common/config"
 	"net/http"
 	"time"
+
+	"github.com/songquanpeng/one-api/common/config"
 )
 
 var HTTPClient *http.Client
