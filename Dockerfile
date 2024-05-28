@@ -4,6 +4,8 @@ WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
 
+RUN npm config set registry http://mirrors.cloud.tencent.com/npm/
+
 WORKDIR /web/default
 RUN npm install
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
@@ -24,6 +26,7 @@ ENV GO111MODULE=on \
 
 WORKDIR /build
 ADD go.mod go.sum ./
+RUN go env -w GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 COPY . .
 COPY --from=builder /web/build ./web/build
