@@ -470,8 +470,6 @@
   "查询": "Query",
   "提示": "Prompt",
   "补全": "Completion",
-  "流式": "Stream",
-  "耗时": "Time Cost",
   "消耗额度": "Used Quota",
   "可选值": "Optional Values",
   "渠道不存在：%d": "Channel does not exist: %d",

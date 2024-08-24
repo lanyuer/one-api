@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/client"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/logger"
@@ -22,7 +23,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/billing"
 	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
 	"github.com/songquanpeng/one-api/relay/channeltype"
-	"github.com/songquanpeng/one-api/relay/client"
 	"github.com/songquanpeng/one-api/relay/meta"
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
@@ -56,7 +56,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 	}
 
-	modelRatio := billingratio.GetModelRatio(audioModel)
+	modelRatio := billingratio.GetModelRatio(audioModel, channelType)
 	groupRatio := billingratio.GetGroupRatio(group)
 	ratio := modelRatio * groupRatio
 	var quota int64
@@ -225,7 +225,8 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	succeed = true
 	quotaDelta := quota - preConsumedQuota
 	defer func(ctx context.Context) {
-		go billing.PostConsumeQuota(ctx, tokenId, quotaDelta, quota, userId, channelId, modelRatio, groupRatio, audioModel, tokenName, startTime)
+		useTime := int64(time.Now().UnixMicro() - startTime)
+		go billing.PostConsumeQuota(ctx, tokenId, quotaDelta, quota, userId, channelId, modelRatio, groupRatio, audioModel, tokenName, useTime, false)
 	}(c.Request.Context())
 
 	for k, v := range resp.Header {

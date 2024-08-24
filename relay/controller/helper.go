@@ -42,78 +42,6 @@ func getAndValidateTextRequest(c *gin.Context, relayMode int) (*relaymodel.Gener
 	return textRequest, nil
 }
 
-func getImageRequest(c *gin.Context, relayMode int) (*relaymodel.ImageRequest, error) {
-	imageRequest := &relaymodel.ImageRequest{}
-	err := common.UnmarshalBodyReusable(c, imageRequest)
-	if err != nil {
-		return nil, err
-	}
-	if imageRequest.N == 0 {
-		imageRequest.N = 1
-	}
-	if imageRequest.Size == "" {
-		imageRequest.Size = "1024x1024"
-	}
-	if imageRequest.Model == "" {
-		imageRequest.Model = "dall-e-2"
-	}
-	return imageRequest, nil
-}
-
-func isValidImageSize(model string, size string) bool {
-	if model == "cogview-3" {
-		return true
-	}
-	_, ok := billingratio.ImageSizeRatios[model][size]
-	return ok
-}
-
-func getImageSizeRatio(model string, size string) float64 {
-	ratio, ok := billingratio.ImageSizeRatios[model][size]
-	if !ok {
-		return 1
-	}
-	return ratio
-}
-
-func validateImageRequest(imageRequest *relaymodel.ImageRequest, meta *meta.Meta) *relaymodel.ErrorWithStatusCode {
-	// model validation
-	hasValidSize := isValidImageSize(imageRequest.Model, imageRequest.Size)
-	if !hasValidSize {
-		return openai.ErrorWrapper(errors.New("size not supported for this image model"), "size_not_supported", http.StatusBadRequest)
-	}
-	// check prompt length
-	if imageRequest.Prompt == "" {
-		return openai.ErrorWrapper(errors.New("prompt is required"), "prompt_missing", http.StatusBadRequest)
-	}
-	if len(imageRequest.Prompt) > billingratio.ImagePromptLengthLimitations[imageRequest.Model] {
-		return openai.ErrorWrapper(errors.New("prompt is too long"), "prompt_too_long", http.StatusBadRequest)
-	}
-	// Number of generated images validation
-	if !isWithinRange(imageRequest.Model, imageRequest.N) {
-		// channel not azure
-		if meta.ChannelType != channeltype.Azure {
-			return openai.ErrorWrapper(errors.New("invalid value of n"), "n_not_within_range", http.StatusBadRequest)
-		}
-	}
-	return nil
-}
-
-func getImageCostRatio(imageRequest *relaymodel.ImageRequest) (float64, error) {
-	if imageRequest == nil {
-		return 0, errors.New("imageRequest is nil")
-	}
-	imageCostRatio := getImageSizeRatio(imageRequest.Model, imageRequest.Size)
-	if imageRequest.Quality == "hd" && imageRequest.Model == "dall-e-3" {
-		if imageRequest.Size == "1024x1024" {
-			imageCostRatio *= 2
-		} else {
-			imageCostRatio *= 1.5
-		}
-	}
-	return imageCostRatio, nil
-}
-
 func getPromptTokens(textRequest *relaymodel.GeneralOpenAIRequest, relayMode int) int {
 	switch relayMode {
 	case relaymode.ChatCompletions:
@@ -163,14 +91,13 @@ func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIR
 	return preConsumedQuota, nil
 }
 
-func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest,
-	ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, startTime int64, stream bool) {
+func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, startTime int64, stream bool) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
 	}
 	var quota int64
-	completionRatio := billingratio.GetCompletionRatio(textRequest.Model)
+	completionRatio := billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
 	quota = int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
@@ -196,7 +123,6 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f", modelRatio, groupRatio, completionRatio)
 	model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, promptTokens, completionTokens, textRequest.Model, meta.TokenName, quota, logContent, useTime, stream)
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
-
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
 }
 

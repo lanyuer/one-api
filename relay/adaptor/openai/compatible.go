@@ -10,8 +10,10 @@ import (
 	"github.com/songquanpeng/one-api/relay/adaptor/minimax"
 	"github.com/songquanpeng/one-api/relay/adaptor/mistral"
 	"github.com/songquanpeng/one-api/relay/adaptor/moonshot"
+	"github.com/songquanpeng/one-api/relay/adaptor/novita"
 	"github.com/songquanpeng/one-api/relay/adaptor/stepfun"
 	"github.com/songquanpeng/one-api/relay/adaptor/togetherai"
+	"github.com/songquanpeng/one-api/relay/adaptor/siliconflow"
 	"github.com/songquanpeng/one-api/relay/channeltype"
 )
 
@@ -28,6 +30,8 @@ var CompatibleChannels = []int{
 	channeltype.StepFun,
 	channeltype.DeepSeek,
 	channeltype.TogetherAI,
+	channeltype.Novita,
+	channeltype.SiliconFlow,
 }
 
 func GetCompatibleChannelMeta(channelType int) (string, []string) {
@@ -42,8 +46,6 @@ func GetCompatibleChannelMeta(channelType int) (string, []string) {
 		return "baichuan", baichuan.ModelList
 	case channeltype.Minimax:
 		return "minimax", minimax.ModelList
-	case channeltype.Doubao:
-		return "doubao", doubao.ModelList
 	case channeltype.Mistral:
 		return "mistralai", mistral.ModelList
 	case channeltype.Groq:
@@ -56,6 +58,12 @@ func GetCompatibleChannelMeta(channelType int) (string, []string) {
 		return "deepseek", deepseek.ModelList
 	case channeltype.TogetherAI:
 		return "together.ai", togetherai.ModelList
+	case channeltype.Doubao:
+		return "doubao", doubao.ModelList
+	case channeltype.Novita:
+		return "novita", novita.ModelList
+	case channeltype.SiliconFlow:
+		return "siliconflow", siliconflow.ModelList
 	default:
 		return "openai", ModelList
 	}

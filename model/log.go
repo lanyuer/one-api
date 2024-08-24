@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"fmt"
-
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
@@ -26,8 +25,6 @@ type Log struct {
 	UseTime          int    `json:"use_time" gorm:"default:0"`
 	IsStream         bool   `json:"is_stream" gorm:"default:false"`
 	ChannelId        int    `json:"channel" gorm:"index"`
-	TokenId          int    `json:"token_id" gorm:"default:0;index"`
-	Other            string `json:"other"`
 }
 
 const (

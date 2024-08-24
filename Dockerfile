@@ -1,4 +1,4 @@
-FROM node:16 as builder
+FROM --platform=$BUILDPLATFORM node:16 AS builder
 
 WORKDIR /web
 COPY ./VERSION .
@@ -18,7 +18,9 @@ WORKDIR /web/air
 RUN npm install
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
 
-FROM golang AS builder2
+FROM golang:alpine AS builder2
+
+RUN apk add --no-cache g++
 
 ENV GO111MODULE=on \
     CGO_ENABLED=1 \
@@ -26,15 +28,13 @@ ENV GO111MODULE=on \
 
 WORKDIR /build
 ADD go.mod go.sum ./
-RUN go env -w GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 COPY . .
 COPY --from=builder /web/build ./web/build
-RUN go build -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=$(cat VERSION)' -extldflags '-static'" -o one-api
+RUN go build -trimpath -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=$(cat VERSION)' -extldflags '-static'" -o one-api
 
 FROM alpine
 
-RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 RUN apk update \
     && apk upgrade \
     && apk add --no-cache ca-certificates tzdata \

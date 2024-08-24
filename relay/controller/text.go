@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay"
+	"github.com/songquanpeng/one-api/relay/adaptor"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/relay/apitype"
 	"github.com/songquanpeng/one-api/relay/billing"
@@ -22,7 +23,6 @@ import (
 
 func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	startTime := time.Now().UnixMicro()
-
 	ctx := c.Request.Context()
 	meta := meta.GetByContext(c)
 	// get & validate textRequest
@@ -34,12 +34,11 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	meta.IsStream = textRequest.Stream
 
 	// map model name
-	var isModelMapped bool
 	meta.OriginModelName = textRequest.Model
-	textRequest.Model, isModelMapped = getMappedModelName(textRequest.Model, meta.ModelMapping)
+	textRequest.Model, _ = getMappedModelName(textRequest.Model, meta.ModelMapping)
 	meta.ActualModelName = textRequest.Model
 	// get model ratio & group ratio
-	modelRatio := billingratio.GetModelRatio(textRequest.Model)
+	modelRatio := billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
 	groupRatio := billingratio.GetGroupRatio(meta.Group)
 	ratio := modelRatio * groupRatio
 	// pre-consume quota
@@ -58,30 +57,9 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	adaptor.Init(meta)
 
 	// get request body
-	var requestBody io.Reader
-	if meta.APIType == apitype.OpenAI {
-		// no need to convert request for openai
-		shouldResetRequestBody := isModelMapped || meta.ChannelType == channeltype.Baichuan // frequency_penalty 0 is not acceptable for baichuan
-		if shouldResetRequestBody {
-			jsonStr, err := json.Marshal(textRequest)
-			if err != nil {
-				return openai.ErrorWrapper(err, "json_marshal_failed", http.StatusInternalServerError)
-			}
-			requestBody = bytes.NewBuffer(jsonStr)
-		} else {
-			requestBody = c.Request.Body
-		}
-	} else {
-		convertedRequest, err := adaptor.ConvertRequest(c, meta.Mode, textRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "convert_request_failed", http.StatusInternalServerError)
-		}
-		jsonData, err := json.Marshal(convertedRequest)
-		if err != nil {
-			return openai.ErrorWrapper(err, "json_marshal_failed", http.StatusInternalServerError)
-		}
-		logger.Debugf(ctx, "converted request: \n%s", string(jsonData))
-		requestBody = bytes.NewBuffer(jsonData)
+	requestBody, err := getRequestBody(c, meta, textRequest, adaptor)
+	if err != nil {
+		return openai.ErrorWrapper(err, "convert_request_failed", http.StatusInternalServerError)
 	}
 
 	// do request
@@ -105,4 +83,27 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// post-consume quota
 	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, startTime, textRequest.Stream)
 	return nil
+}
+
+func getRequestBody(c *gin.Context, meta *meta.Meta, textRequest *model.GeneralOpenAIRequest, adaptor adaptor.Adaptor) (io.Reader, error) {
+	if meta.APIType == apitype.OpenAI && meta.OriginModelName == meta.ActualModelName && meta.ChannelType != channeltype.Baichuan {
+		// no need to convert request for openai
+		return c.Request.Body, nil
+	}
+
+	// get request body
+	var requestBody io.Reader
+	convertedRequest, err := adaptor.ConvertRequest(c, meta.Mode, textRequest)
+	if err != nil {
+		logger.Debugf(c.Request.Context(), "converted request failed: %s\n", err.Error())
+		return nil, err
+	}
+	jsonData, err := json.Marshal(convertedRequest)
+	if err != nil {
+		logger.Debugf(c.Request.Context(), "converted request json_marshal_failed: %s\n", err.Error())
+		return nil, err
+	}
+	logger.Debugf(c.Request.Context(), "converted request: \n%s", string(jsonData))
+	requestBody = bytes.NewBuffer(jsonData)
+	return requestBody, nil
 }

@@ -42,7 +42,7 @@ function renderIsStream(bool) {
 }
 
 function renderUseTime(type) {
-  const time = parseInt(type/1000);
+  const time = parseInt(type / 1000);
   if (time < 101) {
     return <Tag color="green" size="large"> {time} ms </Tag>;
   } else if (time < 1001) {
@@ -100,7 +100,7 @@ const LogsTable = () => {
       </div> : <></>);
     }
   },
- {
+  {
     title: '用时', dataIndex: 'use_time', render: (text, record, index) => {
       return (<div>
         <Space>
